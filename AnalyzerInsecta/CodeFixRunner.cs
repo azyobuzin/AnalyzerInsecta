@@ -36,16 +36,15 @@ namespace AnalyzerInsecta
 
         public async Task<ImmutableArray<CodeFixResult>> RunCodeFixesAsync(Project project, IEnumerable<Diagnostic> diagnostics, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var result = ImmutableArray.CreateBuilder<CodeFixResult>();
-            var waitingTasks = new List<Task>();
+            var waitingTasks = new List<Task<CodeFixResult[]>>();
 
             // Find the same spans
             var groups = diagnostics.Where(x => x.Location.IsInSource && x.Location.SourceTree != null)
-                .GroupBy(x => Tuple.Create(project.GetDocument(x.Location.SourceTree), x.Location.SourceSpan));
+                .GroupBy(x => new DocumentSpan(project.GetDocument(x.Location.SourceTree), x.Location.SourceSpan));
 
             foreach (var g in groups)
             {
-                var span = new DocumentSpan(g.Key.Item1, g.Key.Item2);
+                var span = g.Key;
 
                 foreach (var p in this._codeFixProviders.Where(x => x.Languages.Contains(project.Language)))
                 {
@@ -54,43 +53,116 @@ namespace AnalyzerInsecta
 
                     if (targetDiagnostics.Length > 0)
                     {
-                        await p.Instance
-                            .RegisterCodeFixesAsync(new CodeFixContext(
-                                span.Document,
-                                span.TextSpan,
-                                targetDiagnostics,
-                                (codeAction, _) => waitingTasks.Add(Task.Run(async () =>
+                        waitingTasks.Add(Task.Run(async () =>
+                        {
+                            var registerCodeFixTasks = new List<Task<CodeFixResult>>();
+
+                            Action<CodeAction, ImmutableArray<Diagnostic>> registerCodeFix = (codeAction, ds) =>
+                            {
+                                registerCodeFixTasks.Add(Task.Run(async () =>
                                 {
-                                    foreach (var op in await codeAction.GetOperationsAsync(cancellationToken).ConfigureAwait(false))
+                                    var operations = await codeAction.GetOperationsAsync(cancellationToken).ConfigureAwait(false);
+
+                                    if (operations.Length == 0) return null;
+
+                                    var isSupported = false;
+                                    var changes = default(ImmutableArray<ChangedDocument>);
+
+                                    if (operations.Length == 1)
                                     {
-                                        var aco = op as ApplyChangesOperation;
-                                        if (aco != null)
+                                        var firstOperation = operations[0] as ApplyChangesOperation;
+                                        if (firstOperation != null)
                                         {
-                                            // TODO
-                                            // というかやはりここに長々と書くの汚い
-                                        }
-                                        else
-                                        {
-                                            result.Add(new CodeFixResult(
-                                                p.Name,
-                                                codeAction.Title,
-                                                span,
-                                                false,
-                                                default(ImmutableArray<ChangedDocument>)
-                                            ));
+                                            isSupported = TryGetChangedDocuments(project, firstOperation.ChangedSolution, out changes);
                                         }
                                     }
-                                }, cancellationToken)),
-                                cancellationToken
-                            ))
-                            .ConfigureAwait(false);
+
+                                    return new CodeFixResult(
+                                        p.Name,
+                                        codeAction.Title,
+                                        ds,
+                                        span,
+                                        isSupported,
+                                        changes
+                                    );
+                                }, cancellationToken));
+                            };
+
+                            await p.Instance
+                                .RegisterCodeFixesAsync(new CodeFixContext(
+                                    span.Document,
+                                    span.TextSpan,
+                                    targetDiagnostics,
+                                    registerCodeFix,
+                                    cancellationToken
+                                ))
+                                .ConfigureAwait(false);
+
+                            return await Task.WhenAll(registerCodeFixTasks).ConfigureAwait(false);
+                        }, cancellationToken));
                     }
                 }
             }
 
-            await Task.WhenAll(waitingTasks).ConfigureAwait(false);
+            return (await Task.WhenAll(waitingTasks).ConfigureAwait(false))
+                .SelectMany(x => x)
+                .Where(x => x != null)
+                .ToImmutableArray();
+        }
 
-            return result.ToImmutable();
+        private static bool TryGetChangedDocuments(Project baseProject, Solution changedSolution, out ImmutableArray<ChangedDocument> result)
+        {
+            result = default(ImmutableArray<ChangedDocument>);
+
+            var solutionChanges = changedSolution.GetChanges(baseProject.Solution);
+
+            // The solution has been changed.
+            if (solutionChanges.GetAddedProjects().Any() || solutionChanges.GetRemovedProjects().Any())
+                return false;
+
+            var changedProjects = solutionChanges.GetProjectChanges().ToArray();
+
+            if (changedProjects.Length == 0)
+            {
+                result = ImmutableArray<ChangedDocument>.Empty;
+                return true;
+            }
+
+            // Other projects have been changed.
+            if (changedProjects.Length > 1) return false;
+
+            var projectChanges = changedProjects[0];
+
+            if (projectChanges.OldProject != baseProject
+                || projectChanges.GetAddedAdditionalDocuments().Any()
+                || projectChanges.GetAddedAnalyzerReferences().Any()
+                || projectChanges.GetAddedMetadataReferences().Any()
+                || projectChanges.GetAddedProjectReferences().Any()
+                || projectChanges.GetChangedAdditionalDocuments().Any()
+                || projectChanges.GetRemovedAdditionalDocuments().Any()
+                || projectChanges.GetRemovedAnalyzerReferences().Any()
+                || projectChanges.GetRemovedMetadataReferences().Any()
+                || projectChanges.GetRemovedProjectReferences().Any())
+                return false;
+
+            var newProject = projectChanges.NewProject;
+
+            result = projectChanges.GetAddedDocuments()
+                .Select(x => new ChangedDocument(null, newProject.GetDocument(x)))
+                .Concat(
+                    projectChanges.GetChangedDocuments()
+                        .Select(x => new ChangedDocument(
+                            baseProject.GetDocument(x),
+                            newProject.GetDocument(x)
+                        ))
+                )
+                .Concat(
+                    projectChanges.GetRemovedDocuments()
+                        .Select(x => new ChangedDocument(baseProject.GetDocument(x), null))
+                )
+                .ToImmutableArray();
+
+            return true;
         }
 
         private struct CodeFixProviderInfo
