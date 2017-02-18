@@ -41,21 +41,27 @@ namespace AnalyzerInsecta
 
             var workspace = MSBuildWorkspace.Create();
             var projects = await Task.WhenAll(
-                config.Projects
-                    .Select(x => workspace.OpenProjectAsync(x))
+                config.Projects.Select(x =>
+                    Task.Run(() => workspace.OpenProjectAsync(x))
+                )
             );
 
             var analyzerRunner = new AnalyzerRunner();
+            var codeFixRunner = new CodeFixRunner();
 
             foreach (var x in analyzerAssemblies)
+            {
                 analyzerRunner.RegisterAnalyzersFromAssembly(x);
+                codeFixRunner.RegisterCodeFixProvidersFromAssembly(x);
+            }
 
             var analysisResults = await Task.WhenAll(
-                projects.Select(async x =>
-                    await analyzerRunner.RunAnalyzersAsync(
-                        await x.GetCompilationAsync()
-                    )
-                )
+                projects.Select(x => Task.Run(async () =>
+                {
+                    var compilation = await x.GetCompilationAsync().ConfigureAwait(false);
+                    var analysisResult = await analyzerRunner.RunAnalyzersAsync(compilation).ConfigureAwait(false);
+                    return new ProjectAnalysisResult(x, analysisResult.GetAllDiagnostics(), analysisResult.AnalyzerTelemetryInfo);
+                }))
             );
         }
     }
