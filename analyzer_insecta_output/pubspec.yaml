@@ -1,0 +1,11 @@
+name: 'analyzer_insecta_output'
+
+dependencies:
+  dock_spawn: ^1.0.4
+
+dev_dependencies:
+  browser: any
+  dart_to_js_script_rewriter: ^1.0.2
+
+transformers:
+- dart_to_js_script_rewriter
