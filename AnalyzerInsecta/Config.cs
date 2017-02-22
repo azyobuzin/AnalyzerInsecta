@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
@@ -9,9 +11,8 @@ namespace AnalyzerInsecta
     {
         public IList<string> Analyzers { get; set; } = new List<string>();
         public IList<string> Projects { get; set; } = new List<string>();
+        public IDictionary<string, string> BuildProperties { get; set; } = new Dictionary<string, string>();
         public string Output { get; set; }
-        public bool GroupByProject { get; set; } = true;
-        public bool GroupByDiagnosticId { get; set; } = true;
         public bool OpenOutput { get; set; }
 
         internal const string DefaultConfigFileName = "AnalyzerInsecta.json";
@@ -58,6 +59,36 @@ namespace AnalyzerInsecta
                 projects.AddRange(cmdOptions.Projects);
             }
             config.Projects = projects;
+
+            var buildProperties = new Dictionary<string, string>();
+            if (config.BuildProperties != null)
+            {
+                foreach (var kvp in config.BuildProperties)
+                {
+                    if (string.IsNullOrEmpty(kvp.Key))
+                        throw new InvalidOperationException("There is the element of BuildProperties whose key is null.");
+                    buildProperties.Add(kvp.Key, kvp.Value);
+                }
+            }
+            if (cmdOptions.BuildProperties != null)
+            {
+                foreach (var s in cmdOptions.BuildProperties)
+                {
+                    if (string.IsNullOrEmpty(s)) continue;
+
+                    var split = s.Split(new[] { '=' }, 2);
+                    Contract.Assert(split.Length <= 2);
+
+                    if (split.Length >= 2 && split[0].Length == 0)
+                    {
+                        Console.Error.WriteLine($"Invalid property: \"{s}\"");
+                        continue;
+                    }
+
+                    buildProperties[split[0]] = split.Length == 1 ? null : split[1];
+                }
+            }
+            config.BuildProperties = buildProperties;
 
             if (!string.IsNullOrEmpty(cmdOptions.Output))
                 config.Output = cmdOptions.Output;

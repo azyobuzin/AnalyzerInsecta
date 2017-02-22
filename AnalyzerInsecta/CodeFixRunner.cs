@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -36,6 +37,9 @@ namespace AnalyzerInsecta
 
         public async Task<ImmutableArray<CodeFixResult>> RunCodeFixesAsync(Project project, IEnumerable<Diagnostic> diagnostics, CancellationToken cancellationToken = default(CancellationToken))
         {
+            var supportedCodeFixProviders = this._codeFixProviders.FindAll(x => x.Languages.Contains(project.Language));
+            if (supportedCodeFixProviders.Count == 0) return ImmutableArray<CodeFixResult>.Empty;
+
             var waitingTasks = new List<Task<CodeFixResult[]>>();
 
             // Find the same spans
@@ -46,7 +50,7 @@ namespace AnalyzerInsecta
             {
                 var span = g.Key;
 
-                foreach (var p in this._codeFixProviders.Where(x => x.Languages.Contains(project.Language)))
+                foreach (var p in supportedCodeFixProviders)
                 {
                     var supportedDiagnosticIds = p.Instance.FixableDiagnosticIds;
                     var targetDiagnostics = g.Where(x => supportedDiagnosticIds.Contains(x.Id)).ToImmutableArray();
@@ -55,10 +59,13 @@ namespace AnalyzerInsecta
                     {
                         waitingTasks.Add(Task.Run(async () =>
                         {
-                            var registerCodeFixTasks = new List<Task<CodeFixResult>>();
+                            var registerCodeFixTasks = new ConcurrentBag<Task<CodeFixResult>>();
 
                             Action<CodeAction, ImmutableArray<Diagnostic>> registerCodeFix = (codeAction, ds) =>
                             {
+                                if (registerCodeFixTasks == null)
+                                    throw new InvalidOperationException("RegisterCodeFix was called outside of RegisterCodeFixesAsync.");
+
                                 registerCodeFixTasks.Add(Task.Run(async () =>
                                 {
                                     var operations = await codeAction.GetOperationsAsync(cancellationToken).ConfigureAwait(false);
@@ -98,7 +105,9 @@ namespace AnalyzerInsecta
                                 ))
                                 .ConfigureAwait(false);
 
-                            return await Task.WhenAll(registerCodeFixTasks).ConfigureAwait(false);
+                            var tasks = registerCodeFixTasks;
+                            registerCodeFixTasks = null;
+                            return await Task.WhenAll(tasks).ConfigureAwait(false);
                         }, cancellationToken));
                     }
                 }
