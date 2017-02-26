@@ -11,17 +11,15 @@ namespace AnalyzerInsecta
         public string CodeActionTitle { get; }
         public ImmutableArray<Diagnostic> Diagnostics { get; }
         public DocumentSpan DiagnosticSpan { get; }
-        public bool IsSupportedOperation { get; }
-        public ImmutableArray<ChangedDocument> Changes { get; }
+        public ChangedDocument? ChangedDocument { get; }
 
-        public CodeFixResult(string codeFixProviderName, string codeActionTitle, ImmutableArray<Diagnostic> diagnostics, DocumentSpan diagnosticSpan, bool isSupportedOperation, ImmutableArray<ChangedDocument> changes)
+        public CodeFixResult(string codeFixProviderName, string codeActionTitle, ImmutableArray<Diagnostic> diagnostics, DocumentSpan diagnosticSpan, ChangedDocument? changedDocument)
         {
             this.CodeFixProviderName = codeFixProviderName;
             this.CodeActionTitle = codeActionTitle;
             this.Diagnostics = diagnostics;
             this.DiagnosticSpan = diagnosticSpan;
-            this.IsSupportedOperation = isSupportedOperation;
-            this.Changes = changes;
+            this.ChangedDocument = changedDocument;
         }
     }
 
@@ -65,8 +63,8 @@ namespace AnalyzerInsecta
 
         public ChangedDocument(Document oldDocument, Document newDocument)
         {
-            if (oldDocument == null && newDocument == null)
-                throw new ArgumentException();
+            if (oldDocument == null) throw new ArgumentNullException(nameof(oldDocument));
+            if (newDocument == null) throw new ArgumentNullException(nameof(newDocument));
 
             this.OldDocument = oldDocument;
             this.NewDocument = newDocument;

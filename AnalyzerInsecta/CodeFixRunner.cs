@@ -42,7 +42,7 @@ namespace AnalyzerInsecta
 
             var waitingTasks = new List<Task<CodeFixResult[]>>();
 
-            // Find the same spans
+            // 同じ TextSpan のものをグルーピング
             var groups = diagnostics.Where(x => x.Location.IsInSource && x.Location.SourceTree != null)
                 .GroupBy(x => new DocumentSpan(project.GetDocument(x.Location.SourceTree), x.Location.SourceSpan));
 
@@ -66,21 +66,22 @@ namespace AnalyzerInsecta
                                 if (registerCodeFixTasks == null)
                                     throw new InvalidOperationException("RegisterCodeFix was called outside of RegisterCodeFixesAsync.");
 
+                                // RegisterCodeFix は RegisterCodeFixesAsync が終了する前に呼びされるので
+                                // このタイミングで待機タスクリストに突っ込んでおく
                                 registerCodeFixTasks.Add(Task.Run(async () =>
                                 {
                                     var operations = await codeAction.GetOperationsAsync(cancellationToken).ConfigureAwait(false);
 
                                     if (operations.Length == 0) return null;
 
-                                    var isSupported = false;
-                                    var changes = default(ImmutableArray<ChangedDocument>);
+                                    ChangedDocument? changedDocument = null;
 
                                     if (operations.Length == 1)
                                     {
                                         var firstOperation = operations[0] as ApplyChangesOperation;
                                         if (firstOperation != null)
                                         {
-                                            isSupported = TryGetChangedDocuments(project, firstOperation.ChangedSolution, out changes);
+                                            changedDocument = TryGetChangedDocument(project, firstOperation.ChangedSolution);
                                         }
                                     }
 
@@ -89,8 +90,7 @@ namespace AnalyzerInsecta
                                         codeAction.Title,
                                         ds,
                                         span,
-                                        isSupported,
-                                        changes
+                                        changedDocument
                                     );
                                 }, cancellationToken));
                             };
@@ -105,6 +105,8 @@ namespace AnalyzerInsecta
                                 ))
                                 .ConfigureAwait(false);
 
+                            // RegisterCodeFixesAsync 終了後に RegisterCodeFix が呼びされた場合に
+                            // 例外を出すために、ここで registerCodeFixTasks を入れ替えておく
                             var tasks = registerCodeFixTasks;
                             registerCodeFixTasks = null;
                             return await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -119,59 +121,39 @@ namespace AnalyzerInsecta
                 .ToImmutableArray();
         }
 
-        private static bool TryGetChangedDocuments(Project baseProject, Solution changedSolution, out ImmutableArray<ChangedDocument> result)
+        private static ChangedDocument? TryGetChangedDocument(Project baseProject, Solution changedSolution)
         {
-            result = default(ImmutableArray<ChangedDocument>);
-
             var solutionChanges = changedSolution.GetChanges(baseProject.Solution);
 
-            // The solution has been changed.
             if (solutionChanges.GetAddedProjects().Any() || solutionChanges.GetRemovedProjects().Any())
-                return false;
+                return null;
 
             var changedProjects = solutionChanges.GetProjectChanges().ToArray();
-
-            if (changedProjects.Length == 0)
-            {
-                result = ImmutableArray<ChangedDocument>.Empty;
-                return true;
-            }
-
-            // Other projects have been changed.
-            if (changedProjects.Length > 1) return false;
+            if (changedProjects.Length != 1) return null;
 
             var projectChanges = changedProjects[0];
 
             if (projectChanges.OldProject != baseProject
                 || projectChanges.GetAddedAdditionalDocuments().Any()
                 || projectChanges.GetAddedAnalyzerReferences().Any()
+                || projectChanges.GetAddedDocuments().Any()
                 || projectChanges.GetAddedMetadataReferences().Any()
                 || projectChanges.GetAddedProjectReferences().Any()
                 || projectChanges.GetChangedAdditionalDocuments().Any()
                 || projectChanges.GetRemovedAdditionalDocuments().Any()
                 || projectChanges.GetRemovedAnalyzerReferences().Any()
+                || projectChanges.GetRemovedDocuments().Any()
                 || projectChanges.GetRemovedMetadataReferences().Any()
                 || projectChanges.GetRemovedProjectReferences().Any())
-                return false;
+                return null;
 
-            var newProject = projectChanges.NewProject;
+            var changedDocuments = projectChanges.GetChangedDocuments().ToArray();
+            if (changedDocuments.Length != 1) return null;
 
-            result = projectChanges.GetAddedDocuments()
-                .Select(x => new ChangedDocument(null, newProject.GetDocument(x)))
-                .Concat(
-                    projectChanges.GetChangedDocuments()
-                        .Select(x => new ChangedDocument(
-                            baseProject.GetDocument(x),
-                            newProject.GetDocument(x)
-                        ))
-                )
-                .Concat(
-                    projectChanges.GetRemovedDocuments()
-                        .Select(x => new ChangedDocument(baseProject.GetDocument(x), null))
-                )
-                .ToImmutableArray();
-
-            return true;
+            return new ChangedDocument(
+                projectChanges.OldProject.GetDocument(changedDocuments[0]),
+                projectChanges.NewProject.GetDocument(changedDocuments[0])
+            );
         }
 
         private struct CodeFixProviderInfo

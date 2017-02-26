@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.Diagnostics.Telemetry;
 
 namespace AnalyzerInsecta
 {
-    internal class ProjectAnalysisResult
+    public class ProjectAnalysisResult
     {
         public Project Project { get; }
         public ImmutableArray<Diagnostic> Diagnostics { get; }
