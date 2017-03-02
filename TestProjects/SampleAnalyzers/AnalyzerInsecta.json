@@ -1,0 +1,4 @@
+﻿{
+  "Projects": [ "../SampleApp/SampleApp.csproj" ],
+  "Output": "AnalyzerInsecta.html" 
+}

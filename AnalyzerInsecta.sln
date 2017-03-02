@@ -9,6 +9,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestProjects", "TestProject
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleAnalyzers", "TestProjects\SampleAnalyzers\SampleAnalyzers.csproj", "{E3AFF0EC-24A4-43BF-AD63-832B38F0BCF1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleApp", "TestProjects\SampleApp\SampleApp.csproj", "{64D150E1-1615-4FC5-B050-E0257892860E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E3AFF0EC-24A4-43BF-AD63-832B38F0BCF1} = {E3AFF0EC-24A4-43BF-AD63-832B38F0BCF1}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,11 +28,16 @@ Global
 		{E3AFF0EC-24A4-43BF-AD63-832B38F0BCF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E3AFF0EC-24A4-43BF-AD63-832B38F0BCF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E3AFF0EC-24A4-43BF-AD63-832B38F0BCF1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{64D150E1-1615-4FC5-B050-E0257892860E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64D150E1-1615-4FC5-B050-E0257892860E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64D150E1-1615-4FC5-B050-E0257892860E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64D150E1-1615-4FC5-B050-E0257892860E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E3AFF0EC-24A4-43BF-AD63-832B38F0BCF1} = {5898693C-AECE-4CBD-B727-7C86E0844144}
+		{64D150E1-1615-4FC5-B050-E0257892860E} = {5898693C-AECE-4CBD-B727-7C86E0844144}
 	EndGlobalSection
 EndGlobal

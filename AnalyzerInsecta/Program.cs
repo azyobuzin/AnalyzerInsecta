@@ -1,11 +1,12 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.MSBuild;
+using Newtonsoft.Json;
 
 namespace AnalyzerInsecta
 {
@@ -35,37 +36,74 @@ namespace AnalyzerInsecta
                 return;
             }
 
-            var analyzerAssemblies = config.Analyzers
-               .Select(Assembly.LoadFrom)
-               .ToImmutableArray();
-
-            var workspace = MSBuildWorkspace.Create(config.BuildProperties);
-            var projects = await Task.WhenAll(
-                config.Projects.Select(x =>
-                    Task.Run(() => workspace.OpenProjectAsync(x))
-                )
+            var runners = await Phase(
+                "Loading analyzers",
+                () => Task.FromResult(LoadAnalyzers(config))
             );
 
+            var analysisResults = await Phase(
+                "Running analysises",
+                () => RunAnalysises(config, runners.Item1, runners.Item2)
+            );
+
+            var outputFilePath = await Phase(
+                "Writing result",
+                () => WriteOutput(config, analysisResults)
+            );
+
+            Console.WriteLine("Done: " + outputFilePath);
+
+            if (config.OpenOutput)
+                Process.Start(outputFilePath);
+        }
+
+        private static async Task<T> Phase<T>(string message, Func<Task<T>> action)
+        {
+            Console.Write(message);
+            var stopwatch = Stopwatch.StartNew();
+
+            var result = await action().ConfigureAwait(false);
+
+            stopwatch.Stop();
+            Console.WriteLine(" " + stopwatch.Elapsed);
+
+            return result;
+        }
+
+        private static Tuple<AnalyzerRunner, CodeFixRunner> LoadAnalyzers(Config config)
+        {
             var analyzerRunner = new AnalyzerRunner();
             var codeFixRunner = new CodeFixRunner();
 
-            foreach (var x in analyzerAssemblies)
+            foreach (var x in config.Analyzers)
             {
-                analyzerRunner.RegisterAnalyzersFromAssembly(x);
-                codeFixRunner.RegisterCodeFixProvidersFromAssembly(x);
+                var asm = Assembly.LoadFrom(x);
+                analyzerRunner.RegisterAnalyzersFromAssembly(asm);
+                codeFixRunner.RegisterCodeFixProvidersFromAssembly(asm);
             }
 
-            var analysisResults = await Task.WhenAll(
-                projects.Select(x => Task.Run(async () =>
+            return Tuple.Create(analyzerRunner, codeFixRunner);
+        }
+
+        private static Task<ProjectAnalysisResult[]> RunAnalysises(Config config, AnalyzerRunner analyzerRunner, CodeFixRunner codeFixRunner)
+        {
+            var workspace = MSBuildWorkspace.Create(config.BuildProperties);
+
+            return Task.WhenAll(
+                config.Projects.Select(x => Task.Run(async () =>
                 {
-                    var compilation = await x.GetCompilationAsync().ConfigureAwait(false);
+                    var project = await workspace.OpenProjectAsync(x).ConfigureAwait(false);
+                    var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
                     var analysisResult = await analyzerRunner.RunAnalyzersAsync(compilation).ConfigureAwait(false);
                     var diagnostics = analysisResult.GetAllDiagnostics();
-                    var codeFixes = await codeFixRunner.RunCodeFixesAsync(x, diagnostics).ConfigureAwait(false);
-                    return new ProjectAnalysisResult(x, diagnostics, analysisResult.AnalyzerTelemetryInfo, codeFixes);
+                    var codeFixes = await codeFixRunner.RunCodeFixesAsync(project, diagnostics).ConfigureAwait(false);
+                    return new ProjectAnalysisResult(project, diagnostics, analysisResult.AnalyzerTelemetryInfo, codeFixes);
                 }))
             );
+        }
 
+        private static async Task<string> WriteOutput(Config config, ProjectAnalysisResult[] analysisResults)
+        {
             const string defaultOutputFileName = "AnalyzerInsecta.html";
             var outputFilePath = config.Output;
             if (string.IsNullOrEmpty(outputFilePath))
@@ -77,10 +115,15 @@ namespace AnalyzerInsecta
             if (!string.IsNullOrEmpty(outputDir))
                 Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath));
 
-            // TODO
+            var model = await OutputGenerator.CreateModel(analysisResults).ConfigureAwait(false);
 
-            if (config.OpenOutput)
-                Process.Start(outputFilePath);
+            using (var sw = new StreamWriter(outputFilePath, false, new UTF8Encoding(false)))
+            {
+                var serializer = JsonSerializer.Create(new JsonSerializerSettings() { Formatting = Formatting.Indented });
+                serializer.Serialize(sw, model);
+            }
+
+            return outputFilePath;
         }
     }
 }

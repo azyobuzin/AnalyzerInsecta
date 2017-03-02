@@ -92,6 +92,8 @@ namespace AnalyzerInsecta
 
             if (!string.IsNullOrEmpty(cmdOptions.Output))
                 config.Output = cmdOptions.Output;
+            else if (!string.IsNullOrEmpty(config.Output))
+                config.Output = Path.Combine(configDir, config.Output);
 
             return config;
         }
