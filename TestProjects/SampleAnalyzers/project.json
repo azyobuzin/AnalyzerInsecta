@@ -1,0 +1,11 @@
+﻿{
+  "frameworks": {
+    "portable45-Profile7": {}
+  },
+  "runtimes": {
+    "win": {} 
+  },
+  "dependencies": {
+    "Microsoft.CodeAnalysis": "1.3.2"
+  }
+}
