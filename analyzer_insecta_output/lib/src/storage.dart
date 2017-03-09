@@ -8,47 +8,47 @@ class AnalyzerInsectaStorage {
   List<CodeFix> _codeFixes;
 
   AnalyzerInsectaStorage(JsObject j) {
-    _projects = _mapToList(j['Projects'], (i, JsObject jo) =>
+    _projects = _mapToList(j['Projects'] as JsArray<JsObject>, (i, JsObject jo) =>
       new Project(
         new ProjectId(i),
-        jo['Name'],
-        Language.values[jo['Language']],
-        new List.unmodifiable(jo['TelemetryInfo'].map((JsObject x) => new Telemetry.fromJsObject(x)))
+        jo['Name'] as String,
+        Language.values[jo['Language'] as int],
+        new List.unmodifiable((jo['TelemetryInfo'] as JsArray<JsObject>).map((x) => new Telemetry.fromJsObject(x)))
       )
     );
 
-    _documents = _mapToList(j['Documents'], (i, JsObject jo) =>
+    _documents = _mapToList(j['Documents'] as JsArray<JsObject>, (i, JsObject jo) =>
       new Document(
         new DocumentId(i),
-        _projects[jo['ProjectIndex']],
-        jo['Name'],
-        _readLines(jo['Lines'])
+        _projects[jo['ProjectIndex'] as int],
+        jo['Name'] as String,
+        _readLines(jo['Lines'] as JsArray<JsArray<JsObject>>)
       )
     );
 
-    _diagnostics = _mapToList(j['Diagnostics'], (i, JsObject jo) {
-      final int documentIndex = jo['DocumentIndex'];
+    _diagnostics = _mapToList(j['Diagnostics'] as JsArray<JsObject>, (i, JsObject jo) {
+      final documentIndex = jo['DocumentIndex'] as int;
       return new Diagnostic(
         new DiagnosticId(i),
         documentIndex == null ? null : _documents[documentIndex],
-        new LinePosition.fromJsObject(jo['Start']),
-        new LinePosition.fromJsObject(jo['End']),
-        jo['DiagnosticId'],
-        DiagnosticSeverity.values[jo['Severity']],
-        jo['Message']
+        new LinePosition.fromJsObject(jo['Start'] as JsObject),
+        new LinePosition.fromJsObject(jo['End'] as JsObject),
+        jo['DiagnosticId'] as String,
+        DiagnosticSeverity.values[jo['Severity'] as int],
+        jo['Message'] as String
       );
     });
 
-    _codeFixes = _mapToList(j['CodeFixes'], (i, JsObject jo) {
-      final int changedDocumentIndex = jo['ChangedDocumentIndex'];
+    _codeFixes = _mapToList(j['CodeFixes'] as JsArray<JsObject>, (i, JsObject jo) {
+      final changedDocumentIndex = jo['ChangedDocumentIndex'] as int;
       return new CodeFix(
         new CodeFixId(i),
-        jo['CodeFixProviderName'],
-        jo['CodeActionTitle'],
-        new List.unmodifiable(jo['DiagnosticIndexes'].map((int j) => _diagnostics[j])),
+        jo['CodeFixProviderName'] as String,
+        jo['CodeActionTitle'] as String,
+        new List.unmodifiable((jo['DiagnosticIndexes'] as JsArray<int>).map((j) => _diagnostics[j])),
         changedDocumentIndex == null ? null : _documents[changedDocumentIndex],
-        _readLines(jo['NewDocumentLines']),
-        new List.unmodifiable(jo['ChangedLineMaps'].map((JsObject x) => new ChangedLineMap.fromJsObject(x)))
+        _readLines(jo['NewDocumentLines'] as JsArray<JsArray<JsObject>>),
+        new List.unmodifiable((jo['ChangedLineMaps'] as JsArray<JsObject>).map((x) => new ChangedLineMap.fromJsObject(x)))
       );
     });
   }

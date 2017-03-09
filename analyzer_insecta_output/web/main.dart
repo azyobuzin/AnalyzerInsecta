@@ -5,7 +5,7 @@ import 'package:analyzer_insecta_output/analyzer_insecta_output.dart';
 
 void main() {
   final controller = new AnalyzerInsectaController(
-    new AnalyzerInsectaStorage(js.context["analyzerInsectaData"])
+    new AnalyzerInsectaStorage(js.context['analyzerInsectaData'] as js.JsObject)
   );
   final view = new ViewImpl(controller);
   view.start();
@@ -18,7 +18,7 @@ class ViewImpl {
   ViewImpl(this._controller);
 
   void start() {
-    _dockManager = new ds.DockManager(document.getElementById('dock-manager'));
+    _dockManager = new ds.DockManager(document.getElementById('dock-manager') as DivElement);
     _dockManager.initialize();
 
     window.onResize.listen(_onResized);
@@ -37,7 +37,7 @@ class ViewImpl {
 }
 
 class UnclosablePanelContainer extends ds.PanelContainer {
-  UnclosablePanelContainer(Element elementContent, ds.DockManager dockManager, [String title = "Panel"])
+  UnclosablePanelContainer(Element elementContent, ds.DockManager dockManager, [String title = 'Panel'])
     : super(elementContent, dockManager, title) {
     elementButtonClose.remove();
 
@@ -49,11 +49,11 @@ class DiagnosticsPanel extends UnclosablePanelContainer {
   final AnalyzerInsectaController _controller;
 
   DiagnosticsPanel(this._controller, ds.DockManager dockManager)
-    : super(_createElementContent(), dockManager, "Error List");
+    : super(_createElementContent(), dockManager, 'Error List');
 
   static Element _createElementContent() {
     final container = new DivElement();
-    container.appendText("Hello1");
+    container.appendText('Hello1');
 
     return container;
   }
@@ -63,11 +63,11 @@ class TelemetryPanel extends UnclosablePanelContainer {
   final AnalyzerInsectaController _controller;
 
   TelemetryPanel(this._controller, ds.DockManager dockManager)
-      : super(_createElementContent(), dockManager, "Telemetry Info");
+    : super(_createElementContent(), dockManager, 'Telemetry Info');
 
   static Element _createElementContent() {
     final container = new DivElement();
-    container.appendText("Hello2");
+    container.appendText('Hello2');
 
     return container;
   }

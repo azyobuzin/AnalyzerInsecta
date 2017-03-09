@@ -7,7 +7,7 @@ class ChangedLineMap {
   const ChangedLineMap(this.oldRange, this.newRange);
 
   ChangedLineMap.fromJsObject(JsObject j)
-    : this(new LineRange.fromJsObject(j['Old']), new LineRange.fromJsObject(j['New']));
+    : this(new LineRange.fromJsObject(j['Old'] as JsObject), new LineRange.fromJsObject(j['New'] as JsObject));
 }
 
 class CodeFix {
@@ -101,7 +101,7 @@ class LinePosition {
   const LinePosition(this.line, this.character);
 
   LinePosition.fromJsObject(JsObject j)
-    : this(j['Line'], j['Character']);
+    : this(j['Line'] as int, j['Character'] as int);
 }
 
 class LineRange {
@@ -111,7 +111,7 @@ class LineRange {
   const LineRange(this.startLine, this.lineCount);
 
   LineRange.fromJsObject(JsObject j)
-    : this(j['StartLine'], j['LineCount']);
+    : this(j['StartLine'] as int, j['LineCount'] as int);
 }
 
 class Project {
@@ -163,22 +163,22 @@ class Telemetry {
 
   Telemetry.fromJsObject(JsObject j)
     : this(
-      j['DiagnosticAnalyzerName'],
-      j['CompilationStartActionsCount'],
-      j['CompilationEndActionsCount'],
-      j['CompilationActionsCount'],
-      j['SyntaxTreeActionsCount'],
-      j['SemanticModelActionsCount'],
-      j['SymbolActionsCount'],
-      j['SyntaxNodeActionsCount'],
-      j['CodeBlockStartActionsCount'],
-      j['CodeBlockEndActionsCount'],
-      j['CodeBlockActionsCount'],
-      j['OperationActionsCount'],
-      j['OperationBlockStartActionsCount'],
-      j['OperationBlockEndActionsCount'],
-      j['OperationBlockActionsCount'],
-      new Duration(microseconds:  j['ExecutionTimeInMicroseconds'])
+      j['DiagnosticAnalyzerName'] as String,
+      j['CompilationStartActionsCount'] as int,
+      j['CompilationEndActionsCount'] as int,
+      j['CompilationActionsCount'] as int,
+      j['SyntaxTreeActionsCount'] as int,
+      j['SemanticModelActionsCount'] as int,
+      j['SymbolActionsCount'] as int,
+      j['SyntaxNodeActionsCount'] as int,
+      j['CodeBlockStartActionsCount'] as int,
+      j['CodeBlockEndActionsCount'] as int,
+      j['CodeBlockActionsCount'] as int,
+      j['OperationActionsCount'] as int,
+      j['OperationBlockStartActionsCount'] as int,
+      j['OperationBlockEndActionsCount'] as int,
+      j['OperationBlockActionsCount'] as int,
+      new Duration(microseconds:  j['ExecutionTimeInMicroseconds'] as int)
     );
 }
 
@@ -189,7 +189,7 @@ class TextPart {
   const TextPart(this.type, this.text);
 
   TextPart.fromJsObject(JsObject j)
-    : this(TextPartType.values[j['Type']], j['Text']);
+    : this(TextPartType.values[j['Type'] as int], j['Text'] as String);
 }
 
 enum TextPartType {
