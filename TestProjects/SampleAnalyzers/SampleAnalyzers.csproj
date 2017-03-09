@@ -43,13 +43,13 @@
     <Compile Include="InefficientStringInterpolationAnalyzerCodeFixProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
   <PropertyGroup>
     <StartAction>Program</StartAction>
     <StartProgram>$(MSBuildProjectDirectory)\..\..\AnalyzerInsecta\bin\Debug\AnalyzerInsecta.exe</StartProgram>
-    <StartArguments>-a $(OutputPath)\$(AssemblyName).dll</StartArguments>
+    <StartArguments>-a "$(TargetPath)"</StartArguments>
     <StartWorkingDirectory>$(MSBuildProjectDirectory)</StartWorkingDirectory>
   </PropertyGroup>
-  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
