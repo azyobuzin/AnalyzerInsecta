@@ -1,5 +1,6 @@
 import 'dart:html';
 import 'dart:js' as js;
+import 'dart:mirrors' as mirrors;
 import 'package:dock_spawn/dock_spawn.dart' as ds;
 import 'package:analyzer_insecta_output/analyzer_insecta_output.dart';
 
@@ -63,12 +64,35 @@ class TelemetryPanel extends UnclosablePanelContainer {
   final AnalyzerInsectaController _controller;
 
   TelemetryPanel(this._controller, ds.DockManager dockManager)
-    : super(_createElementContent(), dockManager, 'Telemetry Info');
+    : super(new DivElement(), dockManager, 'Telemetry Info') {
+    final content = new DivElement();
+    content.classes.add("telemetry-content");
 
-  static Element _createElementContent() {
-    final container = new DivElement();
-    container.appendText('Hello2');
+    _controller.storage.projects.forEach((project) {
+      final header = new HeadingElement.h3();
+      header.text = project.name;
+      content.append(header);
 
-    return container;
+      project.telemetryInfo.forEach((telemetry) {
+        final table = new TableElement();
+        table.createCaption().text = telemetry.diagnosticAnalyzerName;
+
+        final mirror = mirrors.reflect(telemetry);
+        mirror.type.declarations.forEach((s, vm) {
+          if (vm is mirrors.VariableMirror) {
+            if (s == #diagnosticAnalyzerName || vm.isStatic) return;
+
+            final row = table.addRow();
+            row.addCell().text = mirrors.MirrorSystem.getName(s);
+            row.addCell().text = mirror.getField(s).reflectee.toString();
+          }
+        });
+
+        content.append(table);
+      });
+    });
+
+    elementContent.classes.add("telemetry-container");
+    elementContent.append(content);
   }
 }

@@ -10,6 +10,23 @@ body {
     font-size: small;
 }
 
+.telemetry-container {
+    overflow: auto;
+}
+
+.telemetry-content {
+    padding: 6px;
+}
+
+.telemetry-content h3 {
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+
+.telemetry-content table {
+    margin-bottom: 6px;
+}
+
 /* dock-manager.css */
 /************* Panel with title bar ************/
 .panel-base {
