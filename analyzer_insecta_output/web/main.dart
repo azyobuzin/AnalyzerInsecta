@@ -90,6 +90,8 @@ class ErrorListPanel extends UnclosablePanelContainer {
         return '⚠';
       case DiagnosticSeverity.error:
         return '❌';
+      default:
+        throw new ArgumentError.value(severity, "severity");
     }
   }
 }
