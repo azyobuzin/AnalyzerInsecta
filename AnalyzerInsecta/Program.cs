@@ -36,14 +36,14 @@ namespace AnalyzerInsecta
                 return;
             }
 
-            var runners = await Phase(
+            var (analyzerRunner, codeFixRunner) = await Phase(
                 "Loading analyzers",
                 () => Task.FromResult(LoadAnalyzers(config))
             );
 
             var analysisResults = await Phase(
                 "Running analysises",
-                () => RunAnalysises(config, runners.Item1, runners.Item2)
+                () => RunAnalysises(config, analyzerRunner, codeFixRunner)
             );
 
             var outputFilePath = await Phase(
@@ -70,7 +70,7 @@ namespace AnalyzerInsecta
             return result;
         }
 
-        private static Tuple<AnalyzerRunner, CodeFixRunner> LoadAnalyzers(Config config)
+        private static (AnalyzerRunner, CodeFixRunner) LoadAnalyzers(Config config)
         {
             var analyzerRunner = new AnalyzerRunner();
             var codeFixRunner = new CodeFixRunner();
@@ -82,7 +82,7 @@ namespace AnalyzerInsecta
                 codeFixRunner.RegisterCodeFixProvidersFromAssembly(asm);
             }
 
-            return Tuple.Create(analyzerRunner, codeFixRunner);
+            return (analyzerRunner, codeFixRunner);
         }
 
         private static Task<ProjectAnalysisResult[]> RunAnalysises(Config config, AnalyzerRunner analyzerRunner, CodeFixRunner codeFixRunner)

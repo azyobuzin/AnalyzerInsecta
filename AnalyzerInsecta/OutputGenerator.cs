@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,6 +11,8 @@ namespace AnalyzerInsecta
 {
     public static class OutputGenerator
     {
+        // TODO: 引数多くなってきたし、 static で全部やるのやめるか
+
         public static async Task<O.OutputModel> CreateModel(ProjectAnalysisResult[] projectAnalysisResults)
         {
             var projects = new O.Project[projectAnalysisResults.Length];
@@ -54,7 +57,8 @@ namespace AnalyzerInsecta
                             i,
                             result.Project.GetDocument(syntaxTree),
                             documents,
-                            documentIndexDictionary
+                            documentIndexDictionary,
+                            result.Diagnostics
                         ).ConfigureAwait(false);
                     }
 
@@ -81,7 +85,7 @@ namespace AnalyzerInsecta
                     {
                         var changedDocument = codeFix.ChangedDocument.Value;
                         documentIndex = documentIndexDictionary[changedDocument.OldDocument];
-                        newDocumentLines = await CreateDocumentLines(changedDocument.NewDocument).ConfigureAwait(false);
+                        newDocumentLines = await CreateDocumentLines(changedDocument.NewDocument, ImmutableArray<R.Diagnostic>.Empty).ConfigureAwait(false);
                         changedLineMaps = await CreateChangedLineMaps(changedDocument.OldDocument, changedDocument.NewDocument).ConfigureAwait(false);
                     }
 
@@ -104,35 +108,77 @@ namespace AnalyzerInsecta
             );
         }
 
-        private static async Task<int> GetDocumentIndexOrAdd(int projectIndex, R.Document document, List<O.Document> documents, Dictionary<R.Document, int> documentIndexDictionary)
+        private static async Task<int> GetDocumentIndexOrAdd(int projectIndex, R.Document document, List<O.Document> documents, Dictionary<R.Document, int> documentIndexDictionary, ImmutableArray<R.Diagnostic> diagnostics)
         {
             int index;
             if (!documentIndexDictionary.TryGetValue(document, out index))
             {
                 index = documents.Count;
-                documents.Add(await CreateDocument(projectIndex, document).ConfigureAwait(false));
+                documents.Add(await CreateDocument(projectIndex, document, diagnostics).ConfigureAwait(false));
                 documentIndexDictionary.Add(document, index);
             }
 
             return index;
         }
 
-        private static async Task<O.Document> CreateDocument(int projectIndex, R.Document document)
+        private static async Task<O.Document> CreateDocument(int projectIndex, R.Document document, ImmutableArray<R.Diagnostic> diagnostics)
         {
             return new O.Document(
                 projectIndex,
                 string.Join("/", document.Folders.Concat(new[] { document.Name })),
-                await CreateDocumentLines(document).ConfigureAwait(false)
+                await CreateDocumentLines(document, diagnostics).ConfigureAwait(false)
             );
         }
 
-        private static async Task<O.TextPart[][]> CreateDocumentLines(R.Document document)
+        private static async Task<O.TextPart[][]> CreateDocumentLines(R.Document document, ImmutableArray<R.Diagnostic> diagnostics)
         {
-            // TODO: シンタックスハイライト
-            return (await document.GetTextAsync().ConfigureAwait(false))
-                .Lines
-                .Select(x => new[] { new O.TextPart(O.TextPartType.Plain, x.ToString()) })
+            var tree = await document.GetSyntaxTreeAsync().ConfigureAwait(false);
+            var text = await document.GetTextAsync().ConfigureAwait(false);
+
+            return text.Lines
+                .Select(x =>
+                {
+                    // TODO: シンタックスハイライト
+                    var parts = new List<(O.TextPartType Type, R.Text.TextSpan Span, R.DiagnosticSeverity? Severity)>()
+                    {
+                        (O.TextPartType.Plain, x.Span, null)
+                    };
+
+                    foreach (var diagnostic in diagnostics)
+                    {
+                        if (diagnostic.Location.SourceTree != tree) continue;
+
+                        var diagSpan = diagnostic.Location.SourceSpan;
+                        if (!x.Span.IntersectsWith(diagSpan)) continue;
+
+                        for (var i = 0; i < parts.Count; i++)
+                        {
+                            var part = parts[i];
+                            var intersection = part.Span.Intersection(diagSpan);
+
+                            if (!intersection.HasValue) continue;
+
+                            if (intersection == part.Span)
+                            {
+                                parts[i] = (part.Type, part.Span, HighSeverity(part.Severity, diagnostic.Severity));
+                            }
+                            else
+                            {
+                                // TODO: 範囲が完全一致ではないときのやつ
+                            }
+                        }
+                    }
+
+                    return parts
+                        .Select(y => new O.TextPart(y.Type, text.ToString(y.Span), y.Severity))
+                        .ToArray();
+                })
                 .ToArray();
+        }
+
+        private static R.DiagnosticSeverity HighSeverity(R.DiagnosticSeverity? x, R.DiagnosticSeverity y)
+        {
+            return x > y ? x.Value : y;
         }
 
         private static async Task<O.ChangedLineMap[]> CreateChangedLineMaps(R.Document oldDocument, R.Document newDocument)
