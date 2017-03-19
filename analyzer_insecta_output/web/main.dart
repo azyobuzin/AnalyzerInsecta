@@ -1,5 +1,6 @@
 import 'dart:html' as html;
 import 'dart:js' as js;
+import 'dart:math';
 @mirrors.MirrorsUsed(targets: 'Telemetry')
 import 'dart:mirrors' as mirrors;
 import 'package:dock_spawn/dock_spawn.dart' as ds;
@@ -155,13 +156,75 @@ class TelemetryPanel extends UnclosablePanelContainer {
 
 class DocumentPanel extends ds.PanelContainer {
   final Document document;
+  html.DivElement _lineNumberContainer;
+  html.DivElement _documentContent;
+  final _lineNumbers = new List<html.DivElement>();
+  final _contentLines = new List<html.DivElement>();
 
   DocumentPanel(ds.DockManager dockManager, this.document)
     : super(new html.DivElement(), dockManager, document.name) {
-    // TODO
+    _lineNumberContainer = new html.DivElement();
+    _lineNumberContainer.classes.add('linenumber-container');
+
+    for (var i = 1; i <= document.lines.length; i++) {
+      final e = new html.DivElement()
+        ..classes.add('linenumber')
+        ..text = i.toString();
+      _lineNumberContainer.append(e);
+      _lineNumbers.add(e);
+    }
+
+    _documentContent = new html.DivElement();
+    _documentContent.classes.add('document-content');
+
+    document.lines.forEach((line) {
+      final lineElement = new html.DivElement();
+      lineElement.classes.add('documentline');
+      line.forEach((part) => lineElement.append(_textPartToSpan(part)));
+      _documentContent.append(lineElement);
+      _contentLines.add(lineElement);
+    });
+
+    elementContent.classes.add('document-container');
+    elementContent.append(_lineNumberContainer);
+    elementContent.append(_documentContent);
+
+    _documentContent.onScroll.listen((e) {
+      _lineNumberContainer.scrollTop = _documentContent.scrollTop;
+    });
+  }
+
+  static html.SpanElement _textPartToSpan(TextPart textPart) {
+    final span = new html.SpanElement();
+
+    switch (textPart.type) {
+      case TextPartType.plain:
+        break;
+    }
+
+    span.text = textPart.text;
+    return span;
+  }
+
+  @override
+  void resize(int width, int height) {
+    super.resize(width, height);
+
+    _documentContent.style.left = '${_lineNumberContainer.offsetWidth}px';
+    _documentContent.style.width = '${elementContent.clientWidth - _lineNumberContainer.offsetWidth}px';
   }
 
   void jumpToLine(int line) {
-    // TODO
+    for (var i = 0; i < document.lines.length; i++) {
+      if (i == line) {
+        _lineNumbers[i].classes.add('line-highlighted');
+        _contentLines[i].classes.add('line-highlighted');
+      } else {
+        _lineNumbers[i].classes.remove('line-highlighted');
+        _contentLines[i].classes.remove('line-highlighted');
+      }
+    }
+
+    _documentContent.scrollTop = min(0, _contentLines[line].offsetTop - 30);
   }
 }

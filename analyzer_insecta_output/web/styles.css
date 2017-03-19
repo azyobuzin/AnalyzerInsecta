@@ -39,6 +39,48 @@ td, th {
     width: 100%;
 }
 
+.document-container {
+    width: 100%;
+    background-color: white;
+}
+
+.linenumber-container {
+    width: 4em;
+    float: left;
+    overflow: hidden;
+    height: 100%;
+}
+
+.linenumber {
+    padding-right: 1em;
+    text-align: right;
+}
+
+.document-content {
+    overflow: scroll;
+    height: 100%;
+}
+
+.document-content:after {
+    display: block;
+    content: "";
+    clear: both;
+}
+
+.documentline {
+    white-space: pre;
+}
+
+.linenumber, .documentline {
+    font-family: Consolas, Meiryo, monospace;
+    font-size: 12pt;
+    height: 1em;
+}
+
+.line-highlighted {
+    background-color: lightyellow;
+}
+
 /* dock-manager.css */
 /************* Panel with title bar ************/
 .panel-base {
