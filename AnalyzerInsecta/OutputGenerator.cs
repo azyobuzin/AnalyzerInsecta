@@ -9,18 +9,30 @@ using R = Microsoft.CodeAnalysis;
 
 namespace AnalyzerInsecta
 {
-    public static class OutputGenerator
+    public sealed class OutputGenerator
     {
-        // TODO: 引数多くなってきたし、 static で全部やるのやめるか
+        private OutputGenerator() { }
 
-        public static async Task<O.OutputModel> CreateModel(ProjectAnalysisResult[] projectAnalysisResults)
+        private O.Project[] _projects;
+        private List<O.Document> _documents;
+        private List<O.Diagnostic> _diagnostics;
+        private List<O.CodeFix> _codeFixes;
+        private Dictionary<R.Document, int> _documentIndexDictionary;
+        private Dictionary<R.Diagnostic, int> _diagnosticIndexDictionary;
+
+        public static Task<O.OutputModel> CreateModel(ProjectAnalysisResult[] projectAnalysisResults)
         {
-            var projects = new O.Project[projectAnalysisResults.Length];
-            var documents = new List<O.Document>();
-            var diagnostics = new List<O.Diagnostic>();
-            var codeFixes = new List<O.CodeFix>();
-            var documentIndexDictionary = new Dictionary<R.Document, int>();
-            var diagnosticIndexDictionary = new Dictionary<R.Diagnostic, int>();
+            return new OutputGenerator().CreateModelCore(projectAnalysisResults);
+        }
+
+        public async Task<O.OutputModel> CreateModelCore(ProjectAnalysisResult[] projectAnalysisResults)
+        {
+            this._projects = new O.Project[projectAnalysisResults.Length];
+            this._documents = new List<O.Document>();
+            this._diagnostics = new List<O.Diagnostic>();
+            this._codeFixes = new List<O.CodeFix>();
+            this._documentIndexDictionary = new Dictionary<R.Document, int>();
+            this._diagnosticIndexDictionary = new Dictionary<R.Diagnostic, int>();
 
             for (var i = 0; i < projectAnalysisResults.Length; i++)
             {
@@ -39,7 +51,7 @@ namespace AnalyzerInsecta
                         throw new NotSupportedException($"'{result.Project.Language}' is not a supported language.");
                 }
 
-                projects[i] = new O.Project(
+                this._projects[i] = new O.Project(
                     result.Project.Name,
                     lang,
                     result.AnalyzerTelemetryInfo
@@ -56,17 +68,15 @@ namespace AnalyzerInsecta
                         documentIndex = await GetDocumentIndexOrAdd(
                             i,
                             result.Project.GetDocument(syntaxTree),
-                            documents,
-                            documentIndexDictionary,
                             result.Diagnostics
                         ).ConfigureAwait(false);
                     }
 
-                    diagnosticIndexDictionary.Add(diagnostic, diagnostics.Count);
+                    this._diagnosticIndexDictionary.Add(diagnostic, this._diagnostics.Count);
 
                     var lineSpan = diagnostic.Location.GetLineSpan();
 
-                    diagnostics.Add(new O.Diagnostic(
+                    this._diagnostics.Add(new O.Diagnostic(
                         documentIndex,
                         new O.LinePosition(lineSpan.StartLinePosition),
                         new O.LinePosition(lineSpan.EndLinePosition),
@@ -84,15 +94,15 @@ namespace AnalyzerInsecta
                     if (codeFix.ChangedDocument.HasValue)
                     {
                         var changedDocument = codeFix.ChangedDocument.Value;
-                        documentIndex = documentIndexDictionary[changedDocument.OldDocument];
+                        documentIndex = this._documentIndexDictionary[changedDocument.OldDocument];
                         newDocumentLines = await CreateDocumentLines(changedDocument.NewDocument, ImmutableArray<R.Diagnostic>.Empty).ConfigureAwait(false);
                         changedLineMaps = await CreateChangedLineMaps(changedDocument.OldDocument, changedDocument.NewDocument).ConfigureAwait(false);
                     }
 
-                    codeFixes.Add(new O.CodeFix(
+                    this._codeFixes.Add(new O.CodeFix(
                         codeFix.CodeFixProviderName,
                         codeFix.CodeActionTitle,
-                        codeFix.Diagnostics.ToArray(x => diagnosticIndexDictionary[x]),
+                        codeFix.Diagnostics.ToArray(x => this._diagnosticIndexDictionary[x]),
                         documentIndex,
                         newDocumentLines,
                         changedLineMaps
@@ -101,21 +111,20 @@ namespace AnalyzerInsecta
             }
 
             return new O.OutputModel(
-                projects,
-                documents.ToArray(),
-                diagnostics.ToArray(),
-                codeFixes.ToArray()
+                this._projects,
+                this._documents.ToArray(),
+                this._diagnostics.ToArray(),
+                this._codeFixes.ToArray()
             );
         }
 
-        private static async Task<int> GetDocumentIndexOrAdd(int projectIndex, R.Document document, List<O.Document> documents, Dictionary<R.Document, int> documentIndexDictionary, ImmutableArray<R.Diagnostic> diagnostics)
+        private async Task<int> GetDocumentIndexOrAdd(int projectIndex, R.Document document, ImmutableArray<R.Diagnostic> diagnostics)
         {
-            int index;
-            if (!documentIndexDictionary.TryGetValue(document, out index))
+            if (!this._documentIndexDictionary.TryGetValue(document, out var index))
             {
-                index = documents.Count;
-                documents.Add(await CreateDocument(projectIndex, document, diagnostics).ConfigureAwait(false));
-                documentIndexDictionary.Add(document, index);
+                index = this._documents.Count;
+                this._documents.Add(await CreateDocument(projectIndex, document, diagnostics).ConfigureAwait(false));
+                this._documentIndexDictionary.Add(document, index);
             }
 
             return index;
@@ -138,11 +147,9 @@ namespace AnalyzerInsecta
             return text.Lines
                 .Select(x =>
                 {
+                    var parts = new LinkedList<WorkingTextPart>();
                     // TODO: シンタックスハイライト
-                    var parts = new List<(O.TextPartType Type, R.Text.TextSpan Span, R.DiagnosticSeverity? Severity)>()
-                    {
-                        (O.TextPartType.Plain, x.Span, null)
-                    };
+                    parts.AddFirst(new WorkingTextPart(O.TextPartType.Plain, x.Span, null));
 
                     foreach (var diagnostic in diagnostics)
                     {
@@ -151,21 +158,47 @@ namespace AnalyzerInsecta
                         var diagSpan = diagnostic.Location.SourceSpan;
                         if (!x.Span.IntersectsWith(diagSpan)) continue;
 
-                        for (var i = 0; i < parts.Count; i++)
+                        var node = parts.First;
+                        while (node != null)
                         {
-                            var part = parts[i];
-                            var intersection = part.Span.Intersection(diagSpan);
+                            var part = node.Value;
 
-                            if (!intersection.HasValue) continue;
+                            if ((!part.Severity.HasValue || part.Severity.Value < diagnostic.Severity)
+                                && part.Span.Intersection(diagSpan) is R.Text.TextSpan intersection)
+                            {
+                                if (intersection == part.Span)
+                                {
+                                    node.Value = new WorkingTextPart(part.Type, part.Span, diagnostic.Severity);
+                                }
+                                else
+                                {
+                                    var next = node.Next;
+                                    parts.Remove(node);
 
-                            if (intersection == part.Span)
-                            {
-                                parts[i] = (part.Type, part.Span, HighSeverity(part.Severity, diagnostic.Severity));
+                                    void AddNext(WorkingTextPart t)
+                                    {
+                                        if (next != null) parts.AddBefore(next, t);
+                                        else parts.AddLast(t);
+                                    }
+
+                                    if (intersection.Start > part.Span.Start)
+                                    {
+                                        AddNext(new WorkingTextPart(part.Type, new R.Text.TextSpan(part.Span.Start, intersection.Start - part.Span.Start), part.Severity));
+                                    }
+
+                                    AddNext(new WorkingTextPart(part.Type, intersection, diagnostic.Severity));
+
+                                    if (intersection.End < part.Span.End)
+                                    {
+                                        AddNext(new WorkingTextPart(part.Type, new R.Text.TextSpan(intersection.End, part.Span.End - intersection.End), part.Severity));
+                                    }
+
+                                    node = next;
+                                    continue;
+                                }
                             }
-                            else
-                            {
-                                // TODO: 範囲が完全一致ではないときのやつ
-                            }
+
+                            node = node.Next;
                         }
                     }
 
@@ -174,11 +207,6 @@ namespace AnalyzerInsecta
                         .ToArray();
                 })
                 .ToArray();
-        }
-
-        private static R.DiagnosticSeverity HighSeverity(R.DiagnosticSeverity? x, R.DiagnosticSeverity y)
-        {
-            return x > y ? x.Value : y;
         }
 
         private static async Task<O.ChangedLineMap[]> CreateChangedLineMaps(R.Document oldDocument, R.Document newDocument)
@@ -258,6 +286,20 @@ namespace AnalyzerInsecta
                 this.StartLine = startLine;
                 this.OldLineCount = oldLineCount;
                 this.AdditionalLineCount = additionalCount;
+            }
+        }
+
+        private struct WorkingTextPart
+        {
+            public O.TextPartType Type { get; }
+            public R.Text.TextSpan Span { get; }
+            public R.DiagnosticSeverity? Severity { get; }
+
+            public WorkingTextPart(O.TextPartType type, R.Text.TextSpan span, R.DiagnosticSeverity? severity)
+            {
+                this.Type = type;
+                this.Span = span;
+                this.Severity = severity;
             }
         }
     }
