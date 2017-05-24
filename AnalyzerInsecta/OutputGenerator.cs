@@ -166,35 +166,30 @@ namespace AnalyzerInsecta
                             if ((!part.Severity.HasValue || part.Severity.Value < diagnostic.Severity)
                                 && part.Span.Intersection(diagSpan) is R.Text.TextSpan intersection)
                             {
-                                if (intersection == part.Span)
+                                if (intersection.Start > part.Span.Start)
                                 {
-                                    node.Value = new WorkingTextPart(part.Type, part.Span, diagnostic.Severity);
+                                    parts.AddBefore(
+                                        node,
+                                        new WorkingTextPart(
+                                            part.Type,
+                                            new R.Text.TextSpan(part.Span.Start, intersection.Start - part.Span.Start),
+                                            part.Severity
+                                        )
+                                    );
                                 }
-                                else
+
+                                node.Value = new WorkingTextPart(part.Type, intersection, diagnostic.Severity);
+
+                                if (intersection.End < part.Span.End)
                                 {
-                                    var next = node.Next;
-                                    parts.Remove(node);
-
-                                    void AddNext(WorkingTextPart t)
-                                    {
-                                        if (next != null) parts.AddBefore(next, t);
-                                        else parts.AddLast(t);
-                                    }
-
-                                    if (intersection.Start > part.Span.Start)
-                                    {
-                                        AddNext(new WorkingTextPart(part.Type, new R.Text.TextSpan(part.Span.Start, intersection.Start - part.Span.Start), part.Severity));
-                                    }
-
-                                    AddNext(new WorkingTextPart(part.Type, intersection, diagnostic.Severity));
-
-                                    if (intersection.End < part.Span.End)
-                                    {
-                                        AddNext(new WorkingTextPart(part.Type, new R.Text.TextSpan(intersection.End, part.Span.End - intersection.End), part.Severity));
-                                    }
-
-                                    node = next;
-                                    continue;
+                                    node = parts.AddAfter(
+                                        node,
+                                        new WorkingTextPart(
+                                            part.Type,
+                                            new R.Text.TextSpan(intersection.End, part.Span.End - intersection.End),
+                                            part.Severity
+                                        )
+                                    );
                                 }
                             }
 
