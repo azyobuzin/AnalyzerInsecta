@@ -36,6 +36,8 @@ namespace AnalyzerInsecta
                 return;
             }
 
+            if (config.AttachDebugger) Debugger.Launch();
+
             var (analyzerRunner, codeFixRunner) = await Phase(
                 "Loading analyzers",
                 () => Task.FromResult(LoadAnalyzers(config))

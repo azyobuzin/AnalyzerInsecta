@@ -14,6 +14,7 @@ namespace AnalyzerInsecta
         public IDictionary<string, string> BuildProperties { get; set; } = new Dictionary<string, string>();
         public string Output { get; set; }
         public bool OpenOutput { get; set; }
+        public bool AttachDebugger { get; set; }
 
         internal const string DefaultConfigFileName = "AnalyzerInsecta.json";
 
@@ -32,7 +33,7 @@ namespace AnalyzerInsecta
                 configDir = Path.GetDirectoryName(configFile);
                 using (var sr = new StreamReader(configFile))
                 {
-                    JsonSerializer.CreateDefault().Populate(sr, config);
+                    JsonSerializer.Create().Populate(sr, config);
                 }
             }
 
@@ -94,6 +95,8 @@ namespace AnalyzerInsecta
                 config.Output = cmdOptions.Output;
             else if (!string.IsNullOrEmpty(config.Output))
                 config.Output = Path.Combine(configDir, config.Output);
+
+            config.AttachDebugger = cmdOptions.AttachDebugger;
 
             return config;
         }

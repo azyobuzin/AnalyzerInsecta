@@ -18,5 +18,8 @@ namespace AnalyzerInsecta
 
         [Option('o', "output", HelpText = "A path to the output file or directory")]
         public string Output { get; set; }
+
+        [Option("attach", HelpText = "Attach a debugger")]
+        public bool AttachDebugger { get; set; }
     }
 }
