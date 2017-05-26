@@ -119,7 +119,10 @@ namespace AnalyzerInsecta
 
             using (var sw = new StreamWriter(outputFilePath, false, new UTF8Encoding(false)))
             {
-                var serializer = JsonSerializer.Create();
+                var serializer = JsonSerializer.Create(new JsonSerializerSettings()
+                {
+                    Formatting = Formatting.Indented
+                });
                 serializer.Serialize(sw, model);
             }
 

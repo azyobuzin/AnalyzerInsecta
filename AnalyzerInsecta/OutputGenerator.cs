@@ -147,6 +147,7 @@ namespace AnalyzerInsecta
             return text.Lines
                 .Select(x =>
                 {
+                    // TODO: diagnostics に該当するものがないなら LinkedList 使わないで行きたい気持ち
                     var parts = new LinkedList<WorkingTextPart>();
                     // TODO: シンタックスハイライト
                     parts.AddFirst(new WorkingTextPart(O.TextPartType.Plain, x.Span, null));

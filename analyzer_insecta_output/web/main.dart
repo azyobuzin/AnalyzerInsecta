@@ -225,6 +225,6 @@ class DocumentPanel extends ds.PanelContainer {
       }
     }
 
-    _documentContent.scrollTop = min(0, _contentLines[line].offsetTop - 30);
+    _documentContent.scrollTop = max(0, _contentLines[line].offsetTop - 30);
   }
 }
