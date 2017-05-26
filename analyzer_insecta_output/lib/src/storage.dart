@@ -13,7 +13,9 @@ class AnalyzerInsectaStorage {
         new ProjectId(i),
         jo['Name'] as String,
         Language.values[jo['Language'] as int],
-        new List.unmodifiable((jo['TelemetryInfo'] as JsArray<JsObject>).map((x) => new Telemetry.fromJsObject(x)))
+        new List.unmodifiable(
+          (jo['TelemetryInfo'] as JsArray<JsObject>)
+            .map<Telemetry>((x) => new Telemetry.fromJsObject(x)))
       )
     );
 
@@ -45,10 +47,14 @@ class AnalyzerInsectaStorage {
         new CodeFixId(i),
         jo['CodeFixProviderName'] as String,
         jo['CodeActionTitle'] as String,
-        new List.unmodifiable((jo['DiagnosticIndexes'] as JsArray<int>).map((j) => _diagnostics[j])),
+        new List.unmodifiable(
+          (jo['DiagnosticIndexes'] as JsArray<int>)
+            .map<Diagnostic>((j) => _diagnostics[j])),
         changedDocumentIndex == null ? null : _documents[changedDocumentIndex],
         _readLines(jo['NewDocumentLines'] as JsArray<JsArray<JsObject>>),
-        new List.unmodifiable((jo['ChangedLineMaps'] as JsArray<JsObject>).map((x) => new ChangedLineMap.fromJsObject(x)))
+        new List.unmodifiable(
+          (jo['ChangedLineMaps'] as JsArray<JsObject>)
+            .map<ChangedLineMap>((x) => new ChangedLineMap.fromJsObject(x)))
       );
     });
   }
@@ -67,13 +73,13 @@ class AnalyzerInsectaStorage {
 }
 
 List<List<TextPart>> _readLines(JsArray<JsArray<JsObject>> source) {
-  return new List.unmodifiable(source.map((x) =>
-    new List<TextPart>.unmodifiable(x.map((y) => new TextPart.fromJsObject(y)))
+  return new List.unmodifiable(source.map<List<TextPart>>((x) =>
+    new List<TextPart>.unmodifiable(x.map<TextPart>((y) => new TextPart.fromJsObject(y)))
   ));
 }
 
 List<E> _mapToList<S, E>(List<S> source, E f(int index, S sourceElement)) {
   return new List.unmodifiable(
-    new Iterable.generate(source.length, (i) => f(i, source[i]))
+    new Iterable<E>.generate(source.length, (i) => f(i, source[i]))
   );
 }

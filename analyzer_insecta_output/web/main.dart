@@ -202,6 +202,19 @@ class DocumentPanel extends ds.PanelContainer {
         break;
     }
 
+    switch (textPart.severity) {
+      case DiagnosticSeverity.hidden:
+      case DiagnosticSeverity.info:
+        span.classes.add('severity-info');
+        break;
+      case DiagnosticSeverity.warning:
+        span.classes.add('severity-warning');
+        break;
+      case DiagnosticSeverity.error:
+        span.classes.add('severity-error');
+        break;
+    }
+
     span.text = textPart.text;
     return span;
   }

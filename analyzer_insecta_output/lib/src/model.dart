@@ -185,13 +185,22 @@ class Telemetry {
 class TextPart {
   final TextPartType type;
   final String text;
+  final DiagnosticSeverity severity;
 
-  const TextPart(this.type, this.text);
+  const TextPart(this.type, this.text, this.severity);
 
   TextPart.fromJsObject(JsObject j)
-    : this(TextPartType.values[j['Type'] as int], j['Text'] as String);
+    : this(
+      TextPartType.values[j['Type'] as int],
+      j['Text'] as String,
+      _toDiagnosticSeverity(j['Severity'] as int)
+    );
 }
 
 enum TextPartType {
   plain
+}
+
+DiagnosticSeverity _toDiagnosticSeverity(int source) {
+  return source == null ? null : DiagnosticSeverity.values[source];
 }

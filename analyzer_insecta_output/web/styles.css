@@ -35,6 +35,10 @@ td, th {
     margin-bottom: 6px;
 }
 
+.errorlist-container {
+    overflow: scroll;
+}
+
 .errorlist-table {
     width: 100%;
 }
@@ -79,6 +83,18 @@ td, th {
 
 .line-highlighted {
     background-color: lightyellow;
+}
+
+.severity-info {
+    border-bottom: dotted gray;
+}
+
+.severity-warning {
+    text-decoration: underline darkgreen;
+}
+
+.severity-error {
+    border-bottom: underline red;
 }
 
 /* dock-manager.css */
