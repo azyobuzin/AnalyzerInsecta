@@ -2,20 +2,24 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Xml.Linq;
 using Mono.Cecil;
 
-namespace UpdateAppConfig
+namespace GenerateAppConfig
 {
     public static class Program
     {
         public static void Main(string[] args)
         {
+            var outputFilePath = args[0];
+
             XNamespace assemblyBindingNamespace = "urn:schemas-microsoft-com:asm.v1";
 
-            var dependentAssemblies = new List<XElement>(args.Length);
-            foreach (var path in args)
+            var dependentAssemblies = new List<XElement>(args.Length - 1);
+            for (var i = 1; i < args.Length; i++)
             {
+                var path = args[i];
                 if (!string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase))
                     continue;
 
@@ -57,34 +61,33 @@ namespace UpdateAppConfig
                 }
             }
 
-            var root = new XElement(
-                "configuration",
+            var document = new XDocument(
                 new XElement(
-                    "startup",
+                    "configuration",
                     new XElement(
-                        "supportedRuntime",
-                        new XAttribute("version", "v4.0"),
-                        new XAttribute("sku", ".NETFramework,Version=v4.6")
-                    )
-                ),
-                new XElement(
-                    "runtime",
+                        "startup",
+                        new XElement(
+                            "supportedRuntime",
+                            new XAttribute("version", "v4.0"),
+                            new XAttribute("sku", ".NETFramework,Version=v4.6")
+                        )
+                    ),
                     new XElement(
-                        assemblyBindingNamespace + "assemblyBinding",
-                        dependentAssemblies
+                        "runtime",
+                        new XElement(
+                            assemblyBindingNamespace + "assemblyBinding",
+                            dependentAssemblies
+                        )
                     )
                 )
             );
 
-            var xmlString = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n"
-                + root.ToString();
+            var outputDirectory = Path.GetDirectoryName(outputFilePath);
+            if (!string.IsNullOrEmpty(outputDirectory))
+                Directory.CreateDirectory(outputDirectory);
 
-            const string outputFileName = "App.config";
-
-            if (!File.Exists(outputFileName) || File.ReadAllText(outputFileName) != xmlString)
-            {
-                File.WriteAllText(outputFileName, xmlString);
-            }
+            using (var writer = new StreamWriter(File.OpenWrite(outputFilePath), new UTF8Encoding(false)))
+                document.Save(writer);
         }
     }
 }

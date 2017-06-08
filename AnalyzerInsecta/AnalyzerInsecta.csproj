@@ -63,11 +63,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config">
-      <SubType>Designer</SubType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="CommandLineParser">
       <Version>1.9.71</Version>
     </PackageReference>
@@ -84,9 +79,17 @@
       <Version>10.0.2</Version>
     </PackageReference>
   </ItemGroup>
-  <Target Name="UpdateAppConfig" AfterTargets="ResolveNuGetPackageAssets">
-    <Exec Command="dotnet run -p ../Tools/UpdateAppConfig/UpdateAppConfig.csproj -- @(ReferenceCopyLocalPaths->'&quot;%(FullPath)&quot;', ' ')" />
+
+  <!-- Generate App.config -->
+  <Target Name="_SetAppConfigPathForGeneration" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <AppConfig>$(IntermediateOutputPath)BindingRedirectsFromNuGet.config</AppConfig>
+    </PropertyGroup>
   </Target>
+  <Target Name="GenerateAppConfig" AfterTargets="ResolveNuGetPackageAssets" Inputs="$(MSBuildAllProjects)" Outputs="$(AppConfig)">
+    <Exec Command="dotnet run -p ../Tools/GenerateAppConfig/GenerateAppConfig.csproj -- &quot;$(AppConfig)&quot; @(ReferenceCopyLocalPaths->'&quot;%(FullPath)&quot;', ' ')" />
+  </Target>
+
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
