@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 using Newtonsoft.Json;
 
@@ -47,6 +48,14 @@ namespace AnalyzerInsecta
                 "Running analysises",
                 () => RunAnalysises(config, analyzerRunner, codeFixRunner)
             );
+
+            analysisResults = Array.FindAll(analysisResults, x => x != null);
+
+            if (analysisResults.Length == 0)
+            {
+                Console.WriteLine("No output");
+                return;
+            }
 
             var outputFilePath = await Phase(
                 "Writing result",
@@ -91,15 +100,35 @@ namespace AnalyzerInsecta
         {
             var workspace = MSBuildWorkspace.Create(config.BuildProperties);
 
+            workspace.WorkspaceFailed += (sender, e) =>
+            {
+                Console.ForegroundColor = e.Diagnostic.Kind == WorkspaceDiagnosticKind.Failure
+                    ? ConsoleColor.Red
+                    : ConsoleColor.DarkYellow;
+                Console.Error.WriteLine(e.Diagnostic.Message);
+                Console.ResetColor();
+            };
+
             return Task.WhenAll(
-                config.Projects.Select(x => Task.Run(async () =>
+                config.Projects
+                .Select(x => Task.Run(async () =>
                 {
-                    var project = await workspace.OpenProjectAsync(x).ConfigureAwait(false);
-                    var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
-                    var analysisResult = await analyzerRunner.RunAnalyzersAsync(compilation).ConfigureAwait(false);
-                    var diagnostics = analysisResult.GetAllDiagnostics();
-                    var codeFixes = await codeFixRunner.RunCodeFixesAsync(project, diagnostics).ConfigureAwait(false);
-                    return new ProjectAnalysisResult(project, diagnostics, analysisResult.AnalyzerTelemetryInfo, codeFixes);
+                    try
+                    {
+                        var project = await workspace.OpenProjectAsync(x).ConfigureAwait(false);
+                        var compilation = await project.GetCompilationAsync().ConfigureAwait(false);
+                        var analysisResult = await analyzerRunner.RunAnalyzersAsync(compilation).ConfigureAwait(false);
+                        var diagnostics = analysisResult.GetAllDiagnostics();
+                        var codeFixes = await codeFixRunner.RunCodeFixesAsync(project, diagnostics).ConfigureAwait(false);
+                        return new ProjectAnalysisResult(project, diagnostics, analysisResult.AnalyzerTelemetryInfo, codeFixes);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.Error.WriteLine("Failed to load " + Path.GetFileName(x) + ": " + ex.ToString());
+                        Console.ResetColor();
+                        return null;
+                    }
                 }))
             );
         }

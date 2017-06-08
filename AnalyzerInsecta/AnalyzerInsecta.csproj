@@ -72,13 +72,13 @@
       <Version>1.9.71</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Build">
-      <Version>15.1.1012</Version>
+      <Version>15.3.0-preview-000117-01</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Build.Tasks.Core">
-      <Version>15.1.1012</Version>
+      <Version>15.3.0-preview-000117-01</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.CodeAnalysis">
-      <Version>2.1.0</Version>
+      <Version>2.3.0-beta3-*</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>10.0.2</Version>
