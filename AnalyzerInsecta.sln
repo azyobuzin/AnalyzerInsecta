@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.12
+VisualStudioVersion = 15.0.26430.14
 MinimumVisualStudioVersion = 15.0
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnalyzerInsecta", "AnalyzerInsecta\AnalyzerInsecta.csproj", "{CC76FEC6-FE05-4CFD-B722-F8484AEB4729}"
 EndProject
@@ -17,6 +17,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{C6C6ABDE-C1A6-47E9-95D7-A5B9FCFA4955}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenerateAppConfig", "Tools\GenerateAppConfig\GenerateAppConfig.csproj", "{2360F4B4-F695-48FC-A20F-258B4ACFCE92}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConcatFiles", "Tools\ConcatFiles\ConcatFiles.csproj", "{92131EF9-EAB8-4E5A-8F56-3F440577A719}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -40,6 +42,10 @@ Global
 		{2360F4B4-F695-48FC-A20F-258B4ACFCE92}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2360F4B4-F695-48FC-A20F-258B4ACFCE92}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2360F4B4-F695-48FC-A20F-258B4ACFCE92}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92131EF9-EAB8-4E5A-8F56-3F440577A719}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92131EF9-EAB8-4E5A-8F56-3F440577A719}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92131EF9-EAB8-4E5A-8F56-3F440577A719}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92131EF9-EAB8-4E5A-8F56-3F440577A719}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -48,5 +54,6 @@ Global
 		{E3AFF0EC-24A4-43BF-AD63-832B38F0BCF1} = {5898693C-AECE-4CBD-B727-7C86E0844144}
 		{64D150E1-1615-4FC5-B050-E0257892860E} = {5898693C-AECE-4CBD-B727-7C86E0844144}
 		{2360F4B4-F695-48FC-A20F-258B4ACFCE92} = {C6C6ABDE-C1A6-47E9-95D7-A5B9FCFA4955}
+		{92131EF9-EAB8-4E5A-8F56-3F440577A719} = {C6C6ABDE-C1A6-47E9-95D7-A5B9FCFA4955}
 	EndGlobalSection
 EndGlobal

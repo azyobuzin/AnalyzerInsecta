@@ -148,16 +148,27 @@ namespace AnalyzerInsecta
 
             var model = await OutputGenerator.CreateModel(analysisResults).ConfigureAwait(false);
 
-            using (var sw = new StreamWriter(outputFilePath, false, new UTF8Encoding(false)))
+            using (var outputStream = File.OpenWrite(outputFilePath))
             {
-                var serializer = JsonSerializer.Create(new JsonSerializerSettings()
+                using (var headStream = OpenResource("head.html"))
+                    headStream.CopyTo(outputStream);
+
+                using (var sw = new StreamWriter(outputStream, new UTF8Encoding(false), 1024, true))
                 {
-                    Formatting = Formatting.Indented
-                });
-                serializer.Serialize(sw, model);
+                    var serializer = JsonSerializer.Create();
+                    serializer.Serialize(sw, model);
+                }
+
+                using (var tailStream = OpenResource("tail.html"))
+                    tailStream.CopyTo(outputStream);
             }
 
             return outputFilePath;
+        }
+
+        private static Stream OpenResource(string resourceName)
+        {
+            return typeof(Program).Assembly.GetManifestResourceStream(typeof(Program), resourceName);
         }
     }
 }

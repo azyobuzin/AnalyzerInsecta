@@ -76,10 +76,9 @@
       <Version>2.3.0-beta3-*</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
-      <Version>10.0.2</Version>
+      <Version>10.0.3</Version>
     </PackageReference>
   </ItemGroup>
-
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 
   <!-- Generate App.config -->
@@ -92,23 +91,42 @@
     <Exec Command="dotnet run -p ../Tools/GenerateAppConfig/GenerateAppConfig.csproj -- &quot;$(AppConfig)&quot; @(ReferenceCopyLocalPaths->'&quot;%(FullPath)&quot;', ' ')" />
   </Target>
 
+  <!-- Build Dart scripts -->
   <Target Name="PubGet" Inputs="..\analyzer_insecta_output\pubspec.yaml" Outputs="..\analyzer_insecta_output\pubspec.lock">
     <Exec Command="pub get" WorkingDirectory="..\analyzer_insecta_output" />
   </Target>
-
+  <ItemDefinitionGroup>
+    <PubBuildInput>
+      <InProject>false</InProject>
+    </PubBuildInput>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <PubBuildInput Include="..\analyzer_insecta_output\pubspec.yaml" />
     <PubBuildInput Include="..\analyzer_insecta_output\pubspec.lock" />
     <PubBuildInput Include="..\analyzer_insecta_output\web\**\*" />
     <PubBuildInput Include="..\analyzer_insecta_output\lib\**\*" />
   </ItemGroup>
-
-  <Target
-      Name="PubBuild"
-      DependsOnTargets="PubGet"
-      Inputs="@(PubBuildInput)"
-      Outputs="..\analyzer_insecta_output\build\web\index.html;..\analyzer_insecta_output\build\web\main.dart.js">
+  <Target Name="PubBuild" DependsOnTargets="PubGet" Inputs="@(PubBuildInput)" Outputs="..\analyzer_insecta_output\build\web\index.html;..\analyzer_insecta_output\build\web\main.dart.js;..\analyzer_insecta_output\build\web\styles.css">
     <Exec Command="pub build" WorkingDirectory="..\analyzer_insecta_output" />
+  </Target>
+  <Target Name="GenerateOutputFileResources" DependsOnTargets="GenerateOutputFileResourcesCore">
+    <ItemGroup>
+      <EmbeddedResource Include="$(IntermediateOutputPath)head.html">
+        <LogicalName>AnalyzerInsecta.head.html</LogicalName>
+        <InProject>false</InProject>
+      </EmbeddedResource>
+      <EmbeddedResource Include="$(IntermediateOutputPath)tail.html">
+        <LogicalName>AnalyzerInsecta.tail.html</LogicalName>
+        <InProject>false</InProject>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+  <Target Name="GenerateOutputFileResourcesCore" DependsOnTargets="PubBuild" Inputs="OutputFileParts\head1.html;OutputFileParts\head2.html;OutputFileParts\tail1.html;OutputFileParts\tail2.html;..\analyzer_insecta_output\build\web\main.dart.js;..\analyzer_insecta_output\build\web\styles.css" Outputs="$(IntermediateOutputPath)head.html;$(IntermediateOutputPath)tail.html">
+    <Exec Command="dotnet run -p ../Tools/ConcatFiles/ConcatFiles.csproj -- $(IntermediateOutputPath)head.html OutputFileParts/head1.html ../analyzer_insecta_output/build/web/styles.css OutputFileParts/head2.html" />
+    <Exec Command="dotnet run -p ../Tools/ConcatFiles/ConcatFiles.csproj -- $(IntermediateOutputPath)tail.html OutputFileParts/tail1.html ../analyzer_insecta_output/build/web/main.dart.js OutputFileParts/tail2.html" />
+    <ItemGroup>
+      <FileWrites Include="$(IntermediateOutputPath)head.html;$(IntermediateOutputPath)tail.html" />
+    </ItemGroup>
   </Target>
 
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -118,6 +136,5 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-
-  <Target Name="BeforeBuild" DependsOnTargets="PubBuild" />
+  <Target Name="BeforeBuild" DependsOnTargets="GenerateOutputFileResources" />
 </Project>
