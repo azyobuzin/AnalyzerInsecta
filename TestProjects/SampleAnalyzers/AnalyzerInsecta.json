@@ -1,4 +1,4 @@
 ﻿{
-  "Projects": [ "../SampleApp/SampleApp.csproj" ],
-  "Output": "AnalyzerInsecta.html" 
+  "Projects": [ "../SampleApp/SampleApp.csproj", "../SampleXamarinApp/SampleXamarinApp.csproj" ],
+  "Output": "AnalyzerInsecta.html"
 }
