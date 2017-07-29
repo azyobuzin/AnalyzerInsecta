@@ -33,10 +33,12 @@ namespace SampleAnalyzers
 
             if (expr == null) return;
 
-            Func<Func<InterpolatedStringExpressionSyntax, SyntaxNode>, CancellationToken, Task<Document>> fix =
-                (converter, cancellationToken) => Task.FromResult(
+            Task<Document> fix(Func<InterpolatedStringExpressionSyntax, SyntaxNode> converter, CancellationToken cancellationToken)
+            {
+                return Task.FromResult(
                     doc.WithSyntaxRoot(root.ReplaceNode(expr, converter(expr)))
                 );
+            }
 
             context.RegisterCodeFix(
                 CodeAction.Create(
@@ -86,8 +88,7 @@ namespace SampleAnalyzers
             return expr.Contents
                 .Select(x =>
                 {
-                    var stringLiteral = x as InterpolatedStringTextSyntax;
-                    if (stringLiteral != null)
+                    if (x is InterpolatedStringTextSyntax stringLiteral)
                     {
                         return SyntaxFactory.LiteralExpression(
                             SyntaxKind.StringLiteralExpression,

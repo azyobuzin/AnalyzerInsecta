@@ -67,13 +67,13 @@
       <Version>1.9.71</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Build">
-      <Version>15.3.0-preview-000117-01</Version>
+      <Version>15.3.0-preview-000388-01</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Build.Tasks.Core">
-      <Version>15.3.0-preview-000117-01</Version>
+      <Version>15.3.0-preview-000388-01</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.CodeAnalysis">
-      <Version>2.3.0-beta3-*</Version>
+      <Version>2.3.1</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>10.0.3</Version>
@@ -130,6 +130,12 @@
     <ItemGroup>
       <FileWrites Include="$(IntermediateOutputPath)head.html;$(IntermediateOutputPath)tail.html" />
     </ItemGroup>
+  </Target>
+  <ItemGroup>
+    <Clean Include="..\analyzer_insecta_output\pubspec.lock" />
+  </ItemGroup>
+  <Target Name="CleanDartBuild" BeforeTargets="CoreClean">
+    <RemoveDir Directories="..\analyzer_insecta_output\build" />
   </Target>
 
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

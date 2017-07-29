@@ -67,7 +67,7 @@ namespace AnalyzerInsecta
                 foreach (var kvp in config.BuildProperties)
                 {
                     if (string.IsNullOrEmpty(kvp.Key))
-                        throw new InvalidOperationException("There is the element of BuildProperties whose key is null.");
+                        throw new InvalidOperationException("There is an element of BuildProperties whose key is null.");
                     buildProperties.Add(kvp.Key, kvp.Value);
                 }
             }

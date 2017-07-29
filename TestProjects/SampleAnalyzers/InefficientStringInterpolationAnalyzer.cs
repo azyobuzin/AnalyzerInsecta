@@ -44,7 +44,7 @@ namespace SampleAnalyzers
                 if (x.AlignmentClause != null || x.FormatClause != null) return;
 
                 var exprType = context.SemanticModel.GetTypeInfo(x.Expression).ConvertedType;
-                if (!ReferenceEquals(exprType, stringTypeSymbol)) return;
+                if (!Equals(exprType, stringTypeSymbol)) return;
             }
 
             // Now all interpolations are plain strings

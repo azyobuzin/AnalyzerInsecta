@@ -1,0 +1,5 @@
+﻿{
+  "Analyzers": [ "bin/Debug/netstandard1.3/SampleNetStandardAnalyzers.dll" ],
+  "Projects": [ "../SampleApp/SampleApp.csproj", "../SampleXamarinApp/SampleXamarinApp.csproj" ],
+  "Output": "AnalyzerInsecta.html"
+}
