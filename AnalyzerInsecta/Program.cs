@@ -105,7 +105,7 @@ namespace AnalyzerInsecta
                 Console.ForegroundColor = e.Diagnostic.Kind == WorkspaceDiagnosticKind.Failure
                     ? ConsoleColor.Red
                     : ConsoleColor.DarkYellow;
-                Console.Error.WriteLine(e.Diagnostic.Message);
+                Console.Error.WriteLine(e.Diagnostic);
                 Console.ResetColor();
             };
 
