@@ -132,7 +132,9 @@
     </ItemGroup>
   </Target>
   <ItemGroup>
-    <Clean Include="..\analyzer_insecta_output\pubspec.lock" />
+    <Clean Include="..\analyzer_insecta_output\pubspec.lock">
+      <InProject>false</InProject>
+    </Clean>
   </ItemGroup>
   <Target Name="CleanDartBuild" BeforeTargets="CoreClean">
     <RemoveDir Directories="..\analyzer_insecta_output\build" />
